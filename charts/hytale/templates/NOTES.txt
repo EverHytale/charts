@@ -1,0 +1,80 @@
+================================================================================
+                    🎮 HYTALE SERVER - EverHytale 🎮
+================================================================================
+
+Congratulations! Your Hytale server has been successfully deployed.
+
+📋 SERVER INFORMATION
+--------------------------------------------------------------------------------
+Server name: {{ .Values.server.name }}
+Max players: {{ .Values.server.maxPlayers }}
+Game mode: {{ .Values.server.gameMode }}
+Difficulty: {{ .Values.server.difficulty }}
+Port: {{ .Values.server.port }}
+
+🔌 CONNECTING TO THE SERVER
+--------------------------------------------------------------------------------
+{{- if contains "NodePort" .Values.service.type }}
+  Get the node IP with:
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "hytale.fullname" . }})
+
+  Connect to: $NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  Getting the external IP may take a few minutes...
+
+  Watch the status with:
+  kubectl get svc --namespace {{ .Release.Namespace }} -w {{ include "hytale.fullname" . }}
+
+  Once available, get the address with:
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "hytale.fullname" . }} --template "{{"{{range (index .status.loadBalancer.ingress 0)}}{{.}}{{end}}"}}")
+  echo "Hytale Server: $SERVICE_IP:{{ .Values.service.port }}"
+{{- else if contains "ClusterIP" .Values.service.type }}
+  To access the server from outside the cluster, create a port-forward:
+
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "hytale.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+
+  Connect to: localhost:{{ .Values.service.port }}
+{{- end }}
+
+{{- if .Values.tcpRoute.enabled }}
+
+🌐 GATEWAY API (TCPRoute)
+--------------------------------------------------------------------------------
+TCPRoute enabled for Gateway API.
+Make sure your Gateway is configured with the appropriate listener.
+{{- end }}
+
+{{- if .Values.server.rcon.enabled }}
+
+🔧 RCON (Remote Console)
+--------------------------------------------------------------------------------
+RCON Port: {{ .Values.server.rcon.port }}
+To connect via RCON, use a compatible RCON client.
+{{- end }}
+
+📁 DATA PERSISTENCE
+--------------------------------------------------------------------------------
+{{- if .Values.persistence.enabled }}
+✅ Persistence enabled
+Volume size: {{ .Values.persistence.size }}
+World data is being saved persistently.
+{{- else }}
+⚠️  Persistence disabled
+WARNING: World data will be lost when the pod restarts!
+{{- end }}
+
+🔍 USEFUL COMMANDS
+--------------------------------------------------------------------------------
+# View server logs
+kubectl logs -f --namespace {{ .Release.Namespace }} deployment/{{ include "hytale.fullname" . }}
+
+# Access container shell
+kubectl exec -it --namespace {{ .Release.Namespace }} deployment/{{ include "hytale.fullname" . }} -- /bin/sh
+
+# Check pod status
+kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "hytale.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+================================================================================
+            Have fun on EverHytale! 🚀
+================================================================================

@@ -1,0 +1,213 @@
+# Default values for hytale.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Number of replicas (should be 1 for game servers)
+replicaCount: 1
+
+# -- Container image configuration
+image:
+  # -- Image repository
+  repository: everhytale/hytale-server
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full name
+fullnameOverride: ""
+
+# -- Service account configuration
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials
+  automount: false
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use
+  name: ""
+
+# -- Pod annotations
+podAnnotations: {}
+# -- Pod labels
+podLabels: {}
+
+# -- Pod security context
+podSecurityContext: {}
+  # fsGroup: 1000
+
+# -- Container security context
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #     - ALL
+  # readOnlyRootFilesystem: false
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+
+server:
+  # -- Server name displayed in the server list
+  name: "Hytale Server"
+  # -- Message of the day
+  motd: "Welcome to Hytale!"
+  # -- Maximum number of players
+  maxPlayers: 20
+  # -- Game server port (TCP/UDP)
+  port: 25565
+  # -- Game mode (survival, creative, adventure)
+  gameMode: "survival"
+  # -- Difficulty (peaceful, easy, normal, hard)
+  difficulty: "normal"
+  # -- Enable PvP
+  pvp: true
+  # -- View distance in chunks
+  viewDistance: 10
+  # -- World seed (leave empty for random)
+  seed: ""
+  # -- Enable whitelist
+  whitelist: false
+
+  # -- RCON configuration for remote administration
+  rcon:
+    # -- Enable RCON
+    enabled: false
+    # -- RCON port
+    port: 25575
+    # -- RCON password (required if enabled)
+    password: "changeme"
+    # -- Use existing secret for RCON password
+    existingSecret: ""
+    # -- Key in existing secret containing the password
+    existingSecretKey: "password"
+
+# =============================================================================
+# Service Configuration
+# =============================================================================
+
+service:
+  # -- Service type (ClusterIP, NodePort, LoadBalancer)
+  type: ClusterIP
+  # -- Game port
+  port: 25565
+  # -- RCON port
+  rconPort: 25575
+  # -- Node port for game (only if type is NodePort)
+  nodePort: null
+  # -- Node port for RCON (only if type is NodePort)
+  rconNodePort: null
+  # -- External traffic policy (Local or Cluster)
+  externalTrafficPolicy: ""
+  # -- Service annotations
+  annotations: {}
+
+# =============================================================================
+# Persistence Configuration
+# =============================================================================
+
+persistence:
+  # -- Enable persistence for world data
+  enabled: true
+  # -- Use an existing PVC
+  existingClaim: ""
+  # -- Storage class (use "-" for default)
+  storageClass: ""
+  # -- Access mode
+  accessMode: ReadWriteOnce
+  # -- Storage size
+  size: 10Gi
+  # -- PVC annotations
+  annotations: {}
+
+# =============================================================================
+# ConfigMap Configuration
+# =============================================================================
+
+configMap:
+  # -- Enable ConfigMap for server.properties
+  enabled: true
+
+# =============================================================================
+# Gateway API - TCPRoute Configuration
+# =============================================================================
+
+tcpRoute:
+  # -- Enable Gateway API TCPRoute
+  enabled: false
+  # -- TCPRoute annotations
+  annotations: {}
+  # -- Parent Gateway references
+  parentRefs:
+    - name: gateway
+      sectionName: hytale
+      # namespace: default
+
+# =============================================================================
+# Resource Configuration
+# =============================================================================
+
+resources: {}
+  # requests:
+  #   cpu: 500m
+  #   memory: 1Gi
+  # limits:
+  #   cpu: 2000m
+  #   memory: 4Gi
+
+# =============================================================================
+# Probes Configuration
+# =============================================================================
+
+# -- Liveness probe configuration (TCP check on game port)
+livenessProbe:
+  tcpSocket:
+    port: game
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Readiness probe configuration (TCP check on game port)
+readinessProbe:
+  tcpSocket:
+    port: game
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Startup probe configuration (gives time for initial world generation)
+startupProbe:
+  tcpSocket:
+    port: game
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# =============================================================================
+# Scheduling Configuration
+# =============================================================================
+
+# -- Additional volumes
+volumes: []
+
+# -- Additional volume mounts
+volumeMounts: []
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity rules
+affinity: {}
