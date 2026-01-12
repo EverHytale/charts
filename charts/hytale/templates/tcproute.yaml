@@ -1,0 +1,23 @@
+{{- if .Values.tcpRoute.enabled -}}
+{{- $fullName := include "hytale.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "hytale.labels" . | nindent 4 }}
+  {{- with .Values.tcpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- with .Values.tcpRoute.parentRefs }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  rules:
+    - backendRefs:
+        - name: {{ $fullName }}
+          port: {{ $svcPort }}
+{{- end }}

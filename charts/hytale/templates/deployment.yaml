@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hytale.fullname" . }}
+  labels:
+    {{- include "hytale.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  # Recreate strategy to avoid two pods accessing the same volume
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "hytale.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "hytale.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "hytale.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: game
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+            - name: game-udp
+              containerPort: {{ .Values.server.port }}
+              protocol: UDP
+            {{- if .Values.server.rcon.enabled }}
+            - name: rcon
+              containerPort: {{ .Values.server.rcon.port }}
+              protocol: TCP
+            {{- end }}
+          env:
+            - name: SERVER_NAME
+              value: {{ .Values.server.name | quote }}
+            - name: SERVER_PORT
+              value: {{ .Values.server.port | quote }}
+            - name: MAX_PLAYERS
+              value: {{ .Values.server.maxPlayers | quote }}
+            - name: GAMEMODE
+              value: {{ .Values.server.gameMode | quote }}
+            - name: DIFFICULTY
+              value: {{ .Values.server.difficulty | quote }}
+            - name: PVP
+              value: {{ .Values.server.pvp | quote }}
+            - name: VIEW_DISTANCE
+              value: {{ .Values.server.viewDistance | quote }}
+            {{- if .Values.server.seed }}
+            - name: SEED
+              value: {{ .Values.server.seed | quote }}
+            {{- end }}
+            - name: MOTD
+              value: {{ .Values.server.motd | quote }}
+            - name: WHITELIST
+              value: {{ .Values.server.whitelist | quote }}
+            {{- if .Values.server.rcon.enabled }}
+            - name: RCON_ENABLED
+              value: "true"
+            - name: RCON_PORT
+              value: {{ .Values.server.rcon.port | quote }}
+            - name: RCON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.server.rcon.existingSecret }}
+                  name: {{ .Values.server.rcon.existingSecret }}
+                  key: {{ .Values.server.rcon.existingSecretKey }}
+                  {{- else }}
+                  name: {{ include "hytale.fullname" . }}-rcon
+                  key: password
+                  {{- end }}
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            {{- if .Values.configMap.enabled }}
+            - name: config
+              mountPath: /config
+              readOnly: true
+            {{- end }}
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "hytale.fullname" .) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.configMap.enabled }}
+        - name: config
+          configMap:
+            name: {{ include "hytale.fullname" . }}-config
+        {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
