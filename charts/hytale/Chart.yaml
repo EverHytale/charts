@@ -1,0 +1,28 @@
+apiVersion: v2
+name: hytale
+description: A Helm chart for deploying Hytale game servers on Kubernetes
+type: application
+
+version: 0.1.0
+appVersion: "latest"
+
+# Kubernetes version compatibility
+kubeVersion: ">=1.33.0-0"
+
+home: https://github.com/EverHytale/charts
+sources:
+  - https://github.com/EverHytale/charts
+
+maintainers:
+  - name: EverHytale
+    url: https://github.com/EverHytale
+
+keywords:
+  - hytale
+  - game-server
+  - gaming
+  - hypixel
+
+annotations:
+  artifacthub.io/license: MIT
+  artifacthub.io/category: gaming
