@@ -5,6 +5,10 @@ A Helm chart for deploying Hytale dedicated game servers on Kubernetes.
 > 🎮 **Docker Image:** `everhytale/hytale-server`
 > 📡 **Protocol:** QUIC/UDP on port 5520
 
+## ⚠️ Disclaimer
+
+This is an unofficial community project. Hytale is a trademark of Hypixel Studios.
+
 ## Prerequisites
 
 - Kubernetes 1.33+
