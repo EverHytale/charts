@@ -167,6 +167,27 @@ jobs:
             fi
           done
 
+      # Push Artifact Hub metadata for verification
+      # https://artifacthub.io/docs/topics/repositories/helm-charts/
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Push Artifact Hub metadata
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          CHART="${{ steps.version.outputs.chart }}"
+
+          if [ -f "artifacthub-repo.yml" ]; then
+            echo "📋 Pushing Artifact Hub metadata for $CHART"
+            oras push \
+              ghcr.io/$OWNER/$CHART:artifacthub.io \
+              --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+              artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+            echo "✅ Artifact Hub metadata pushed successfully"
+          else
+            echo "⚠️ No artifacthub-repo.yml found, skipping metadata push"
+          fi
+
       - name: Summary
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')

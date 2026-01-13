@@ -3,8 +3,8 @@ name: hytale
 description: A Helm chart for deploying Hytale game servers on Kubernetes
 type: application
 
-version: 0.1.1
-appVersion: "latest"
+version: 0.1.2
+appVersion: "1.0"
 
 # Kubernetes version compatibility
 kubeVersion: ">=1.33.0-0"
@@ -25,4 +25,4 @@ keywords:
 
 annotations:
   artifacthub.io/license: MIT
-  artifacthub.io/category: gaming
+  artifacthub.io/category: skip-prediction
