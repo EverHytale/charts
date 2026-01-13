@@ -49,6 +49,16 @@ securityContext:
   runAsGroup: 1001
 
 # =============================================================================
+# Console Access Configuration
+# =============================================================================
+
+console:
+  # -- Enable TTY for the container (required for kubectl attach -it)
+  tty: true
+  # -- Enable stdin for the container (required for kubectl attach -it)
+  stdin: true
+
+# =============================================================================
 # Hytale Server Configuration
 # =============================================================================
 
@@ -91,10 +101,14 @@ jvm:
 # =============================================================================
 
 backup:
-  # -- Enable automatic backups
+  # -- Enable automatic backups (--backup)
   enabled: false
-  # -- Backup frequency in minutes
+  # -- Backup directory path (--backup-dir)
+  dir: "/server/backups"
+  # -- Backup frequency in minutes (--backup-frequency)
   frequency: 30
+  # -- Maximum number of backups to keep (--backup-max-count)
+  maxCount: 5
 
 # =============================================================================
 # Token Authentication (alternative to /auth login device)

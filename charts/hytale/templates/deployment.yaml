@@ -41,6 +41,9 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Enable TTY and stdin for interactive console access (kubectl attach -it)
+          tty: {{ .Values.console.tty }}
+          stdin: {{ .Values.console.stdin }}
           ports:
             - name: game
               containerPort: {{ .Values.server.port }}
@@ -79,8 +82,12 @@ spec:
             # =================================================================
             - name: BACKUP_ENABLED
               value: {{ .Values.backup.enabled | quote }}
+            - name: BACKUP_DIR
+              value: {{ .Values.backup.dir | quote }}
             - name: BACKUP_FREQUENCY
               value: {{ .Values.backup.frequency | quote }}
+            - name: BACKUP_MAX_COUNT
+              value: {{ .Values.backup.maxCount | quote }}
             # =================================================================
             # Token Authentication
             # =================================================================

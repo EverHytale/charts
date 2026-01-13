@@ -2,25 +2,25 @@
 
 A Helm chart for deploying Hytale dedicated game servers on Kubernetes.
 
-> 🎮 **Image Docker:** `everhytale/hytale-server`
-> 📡 **Protocol:** QUIC/UDP sur port 5520
+> 🎮 **Docker Image:** `everhytale/hytale-server`
+> 📡 **Protocol:** QUIC/UDP on port 5520
 
-## Prérequis
+## Prerequisites
 
 - Kubernetes 1.33+
 - Helm 3.x
-- PersistentVolume provisioner (pour la persistence)
-- L'image Docker `everhytale/hytale-server` disponible
+- PersistentVolume provisioner (for persistence)
+- Docker image `everhytale/hytale-server` available
 
 ## Installation
 
-### Installation simple
+### Simple Installation
 
 ```bash
 helm install my-hytale ./charts/hytale
 ```
 
-### Installation avec valeurs personnalisées
+### Installation with Custom Values
 
 ```bash
 helm install my-hytale ./charts/hytale \
@@ -28,7 +28,7 @@ helm install my-hytale ./charts/hytale \
   --set service.type=LoadBalancer
 ```
 
-### Installation avec fichier de valeurs
+### Installation with Values File
 
 ```bash
 helm install my-hytale ./charts/hytale -f my-values.yaml
@@ -36,140 +36,149 @@ helm install my-hytale ./charts/hytale -f my-values.yaml
 
 ## Configuration
 
-### Paramètres de l'image
+### Image Parameters
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `image.repository` | Repository de l'image | `everhytale/hytale-server` |
-| `image.tag` | Tag de l'image | `""` (utilise Chart.AppVersion) |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `image.repository` | Image repository | `everhytale/hytale-server` |
+| `image.tag` | Image tag | `""` (uses Chart.AppVersion) |
 | `image.pullPolicy` | Pull policy | `IfNotPresent` |
-| `imagePullSecrets` | Secrets pour registries privés | `[]` |
+| `imagePullSecrets` | Secrets for private registries | `[]` |
 
-### Configuration du serveur
+### Server Configuration
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `server.port` | Port du serveur (QUIC/UDP) | `5520` |
-| `server.bind` | Adresse de bind | `0.0.0.0` |
-| `server.authMode` | Mode d'authentification | `authenticated` |
-| `server.disableSentry` | Désactiver Sentry | `false` |
-| `server.useAotCache` | Utiliser le cache AOT | `true` |
-| `server.extraArgs` | Arguments supplémentaires | `""` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `server.port` | Server port (QUIC/UDP) | `5520` |
+| `server.bind` | Bind address | `0.0.0.0` |
+| `server.authMode` | Authentication mode | `authenticated` |
+| `server.disableSentry` | Disable Sentry | `false` |
+| `server.useAotCache` | Use AOT cache | `true` |
+| `server.extraArgs` | Extra arguments | `""` |
 
-### Configuration JVM
+### JVM Configuration
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `jvm.minMemory` | Mémoire minimum | `4G` |
-| `jvm.maxMemory` | Mémoire maximum | `8G` |
-| `jvm.javaOpts` | Options JVM personnalisées | `""` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `jvm.minMemory` | Minimum memory | `4G` |
+| `jvm.maxMemory` | Maximum memory | `8G` |
+| `jvm.javaOpts` | Custom JVM options | `""` |
 
-### Configuration des sauvegardes
+### Backup Configuration
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `backup.enabled` | Activer les sauvegardes auto | `false` |
-| `backup.frequency` | Fréquence en minutes | `30` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `backup.enabled` | Enable automatic backups (`--backup`) | `false` |
+| `backup.dir` | Backup directory path (`--backup-dir`) | `/server/backups` |
+| `backup.frequency` | Frequency in minutes (`--backup-frequency`) | `30` |
+| `backup.maxCount` | Maximum backups to keep (`--backup-max-count`) | `5` |
 
-### Authentification
+### Console Access
 
-L'authentification peut se faire de deux manières :
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `console.tty` | Enable TTY for container (required for `kubectl attach -it`) | `true` |
+| `console.stdin` | Enable stdin for container (required for `kubectl attach -it`) | `true` |
 
-#### Option 1 : Tokens via values
+### Authentication
+
+Authentication can be done in two ways:
+
+#### Option 1: Tokens via Values
 
 ```yaml
 auth:
-  ownerName: "MonPseudo"
+  ownerName: "MyUsername"
   ownerUuid: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  sessionToken: "token-de-session"
-  identityToken: "token-identite"
+  sessionToken: "session-token"
+  identityToken: "identity-token"
 ```
 
-#### Option 2 : Secret existant
+#### Option 2: Existing Secret
 
 ```yaml
 auth:
   existingSecret: "my-hytale-auth-secret"
 ```
 
-Le secret doit contenir les clés : `SESSION_TOKEN`, `IDENTITY_TOKEN`, `OWNER_NAME`, `OWNER_UUID`
+The secret must contain keys: `SESSION_TOKEN`, `IDENTITY_TOKEN`, `OWNER_NAME`, `OWNER_UUID`
 
-#### Option 3 : Authentification interactive
+#### Option 3: Interactive Authentication
 
-Sans tokens configurés, authentifiez-vous après le démarrage :
+Without configured tokens, authenticate after startup:
 
 ```bash
-kubectl exec -it deployment/my-hytale -- /bin/bash
-# Dans la console du serveur :
+kubectl attach -it deployment/my-hytale
+# In the server console:
 /auth login device
 /auth persistence Encrypted
 ```
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `auth.ownerName` | Nom du propriétaire | `""` |
-| `auth.ownerUuid` | UUID du propriétaire | `""` |
-| `auth.sessionToken` | Token de session | `""` |
-| `auth.identityToken` | Token d'identité | `""` |
-| `auth.existingSecret` | Secret existant | `""` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `auth.ownerName` | Owner name | `""` |
+| `auth.ownerUuid` | Owner UUID | `""` |
+| `auth.sessionToken` | Session token | `""` |
+| `auth.identityToken` | Identity token | `""` |
+| `auth.existingSecret` | Existing secret | `""` |
 
-### Machine-ID (pour persistence chiffrée)
+### Machine-ID (for Encrypted Persistence)
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `machineId.mountFromHost` | Monter /etc/machine-id | `false` |
-| `machineId.hostPath` | Chemin sur l'hôte | `/etc/machine-id` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `machineId.mountFromHost` | Mount /etc/machine-id | `false` |
+| `machineId.hostPath` | Host path | `/etc/machine-id` |
 
 ### Service
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `service.type` | Type de service | `ClusterIP` |
-| `service.port` | Port du service | `5520` |
-| `service.nodePort` | NodePort (si applicable) | `null` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | `5520` |
+| `service.nodePort` | NodePort (if applicable) | `null` |
 | `service.externalTrafficPolicy` | Traffic policy | `""` |
 | `service.annotations` | Annotations | `{}` |
 
 ### Persistence
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `persistence.enabled` | Activer la persistence | `true` |
-| `persistence.existingClaim` | PVC existant | `""` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `persistence.enabled` | Enable persistence | `true` |
+| `persistence.existingClaim` | Existing PVC | `""` |
 | `persistence.storageClass` | Storage class | `""` |
-| `persistence.accessMode` | Mode d'accès | `ReadWriteOnce` |
-| `persistence.size` | Taille du volume | `10Gi` |
+| `persistence.accessMode` | Access mode | `ReadWriteOnce` |
+| `persistence.size` | Volume size | `10Gi` |
 
 ### Gateway API (UDPRoute)
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `udpRoute.enabled` | Activer UDPRoute | `false` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `udpRoute.enabled` | Enable UDPRoute | `false` |
 | `udpRoute.annotations` | Annotations | `{}` |
-| `udpRoute.parentRefs` | Références Gateway | voir values.yaml |
+| `udpRoute.parentRefs` | Gateway references | see values.yaml |
 
-### Ressources
+### Resources
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `resources.requests.cpu` | CPU demandé | `1000m` |
-| `resources.requests.memory` | Mémoire demandée | `4Gi` |
-| `resources.limits.cpu` | CPU limite | `4000m` |
-| `resources.limits.memory` | Mémoire limite | `8Gi` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `resources.requests.cpu` | Requested CPU | `1000m` |
+| `resources.requests.memory` | Requested memory | `4Gi` |
+| `resources.limits.cpu` | CPU limit | `4000m` |
+| `resources.limits.memory` | Memory limit | `8Gi` |
 
 ### Probes
 
-Les probes utilisent `pgrep -f HytaleServer.jar` pour vérifier que le processus est en cours d'exécution.
+Probes use `pgrep -f HytaleServer.jar` to verify the process is running.
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `livenessProbe.initialDelaySeconds` | Délai initial | `120` |
-| `readinessProbe.initialDelaySeconds` | Délai initial | `60` |
-| `startupProbe.failureThreshold` | Seuil d'échec | `30` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `livenessProbe.initialDelaySeconds` | Initial delay | `120` |
+| `readinessProbe.initialDelaySeconds` | Initial delay | `60` |
+| `startupProbe.failureThreshold` | Failure threshold | `30` |
 
-## Exemples de déploiement
+## Deployment Examples
 
-### Serveur de développement
+### Development Server
 
 ```yaml
 # dev-values.yaml
@@ -193,7 +202,7 @@ resources:
     memory: 4Gi
 ```
 
-### Serveur de production
+### Production Server
 
 ```yaml
 # prod-values.yaml
@@ -232,7 +241,7 @@ nodeSelector:
   node-type: gaming
 ```
 
-### Avec Gateway API
+### With Gateway API
 
 ```yaml
 # gateway-values.yaml
@@ -247,65 +256,75 @@ udpRoute:
       sectionName: hytale-udp
 ```
 
-## Structure des données
+## Data Structure
 
-Le volume `/server` contient :
+The `/server` volume contains:
 
 ```
 /server/
-├── universe/          # Données du monde
-├── logs/              # Logs du serveur
+├── universe/          # World data
+├── logs/              # Server logs
 ├── config/            # Configuration
-├── auth.enc           # Authentification chiffrée
-└── backups/           # Sauvegardes (si activées)
+├── auth.enc           # Encrypted authentication
+└── backups/           # Backups (if enabled)
 ```
 
-## Dépannage
+## Troubleshooting
 
-### Le pod ne démarre pas
+### Pod Fails to Start
 
 ```bash
-# Vérifier les événements
+# Check events
 kubectl describe pod -l app.kubernetes.io/name=hytale
 
-# Vérifier les logs
+# Check logs
 kubectl logs -l app.kubernetes.io/name=hytale --previous
 ```
 
-### Problèmes de mémoire
+### Memory Issues
 
-Assurez-vous que `jvm.maxMemory` correspond aux `resources.limits.memory` :
+Ensure `jvm.maxMemory` matches `resources.limits.memory`:
 
 ```yaml
 jvm:
   maxMemory: "8G"
 resources:
   limits:
-    memory: 10Gi  # Légèrement plus que maxMemory
+    memory: 10Gi  # Slightly more than maxMemory
 ```
 
-### Authentification échoue
+### Authentication Fails
 
-Si l'authentification chiffrée ne fonctionne pas :
+If encrypted authentication doesn't work:
 
-1. Montez le machine-id : `machineId.mountFromHost: true`
-2. Ou utilisez la persistence en mémoire :
+1. Mount the machine-id: `machineId.mountFromHost: true`
+2. Or use in-memory persistence:
    ```
    /auth persistence Memory
    ```
 
-## Désinstallation
+### Cannot Attach to Container Console
+
+If `kubectl attach -it` fails with "Unable to use a TTY", ensure console access is enabled:
+
+```yaml
+console:
+  tty: true
+  stdin: true
+```
+
+## Uninstallation
 
 ```bash
 helm uninstall my-hytale
 ```
 
-⚠️ Le PVC n'est pas supprimé automatiquement. Pour supprimer les données :
+⚠️ The PVC is not automatically deleted. To delete data:
 
 ```bash
 kubectl delete pvc my-hytale
 ```
 
-## Licence
+## License
 
-MIT License - voir [LICENSE](../../LICENSE)
+MIT License - see [LICENSE](../../LICENSE)
