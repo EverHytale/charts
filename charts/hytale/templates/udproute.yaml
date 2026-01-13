@@ -1,19 +1,19 @@
-{{- if .Values.tcpRoute.enabled -}}
+{{- if .Values.udpRoute.enabled -}}
 {{- $fullName := include "hytale.fullname" . -}}
 {{- $svcPort := .Values.service.port -}}
 apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: TCPRoute
+kind: UDPRoute
 metadata:
   name: {{ $fullName }}
   labels:
     {{- include "hytale.labels" . | nindent 4 }}
-  {{- with .Values.tcpRoute.annotations }}
+  {{- with .Values.udpRoute.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
   parentRefs:
-    {{- with .Values.tcpRoute.parentRefs }}
+    {{- with .Values.udpRoute.parentRefs }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
   rules:

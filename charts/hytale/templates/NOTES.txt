@@ -6,11 +6,13 @@ Congratulations! Your Hytale server has been successfully deployed.
 
 📋 SERVER INFORMATION
 --------------------------------------------------------------------------------
-Server name: {{ .Values.server.name }}
-Max players: {{ .Values.server.maxPlayers }}
-Game mode: {{ .Values.server.gameMode }}
-Difficulty: {{ .Values.server.difficulty }}
-Port: {{ .Values.server.port }}
+Bind address: {{ .Values.server.bind }}:{{ .Values.server.port }}
+Protocol: QUIC/UDP
+Auth mode: {{ .Values.server.authMode }}
+Memory: {{ .Values.jvm.minMemory }} - {{ .Values.jvm.maxMemory }}
+{{- if .Values.backup.enabled }}
+Auto backup: Every {{ .Values.backup.frequency }} minutes
+{{- end }}
 
 🔌 CONNECTING TO THE SERVER
 --------------------------------------------------------------------------------
@@ -28,29 +30,42 @@ Port: {{ .Values.server.port }}
 
   Once available, get the address with:
   export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "hytale.fullname" . }} --template "{{"{{range (index .status.loadBalancer.ingress 0)}}{{.}}{{end}}"}}")
-  echo "Hytale Server: $SERVICE_IP:{{ .Values.service.port }}"
+  echo "Hytale Server: $SERVICE_IP:{{ .Values.service.port }} (UDP)"
 {{- else if contains "ClusterIP" .Values.service.type }}
-  To access the server from outside the cluster, create a port-forward:
+  ⚠️  ClusterIP service type - not directly accessible from outside cluster.
 
+  For development, you can use port-forward (UDP not well supported):
   kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "hytale.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
 
-  Connect to: localhost:{{ .Values.service.port }}
+  For production, consider using:
+  - NodePort service type
+  - LoadBalancer service type
+  - Gateway API with UDPRoute
 {{- end }}
 
-{{- if .Values.tcpRoute.enabled }}
+{{- if .Values.udpRoute.enabled }}
 
-🌐 GATEWAY API (TCPRoute)
+🌐 GATEWAY API (UDPRoute)
 --------------------------------------------------------------------------------
-TCPRoute enabled for Gateway API.
-Make sure your Gateway is configured with the appropriate listener.
+UDPRoute enabled for Gateway API.
+Make sure your Gateway is configured with a UDP listener on the appropriate port.
 {{- end }}
 
-{{- if .Values.server.rcon.enabled }}
-
-🔧 RCON (Remote Console)
+🔐 AUTHENTICATION
 --------------------------------------------------------------------------------
-RCON Port: {{ .Values.server.rcon.port }}
-To connect via RCON, use a compatible RCON client.
+{{- if and .Values.auth.sessionToken .Values.auth.identityToken }}
+✅ Token authentication configured
+{{- else if .Values.auth.existingSecret }}
+✅ Using existing secret: {{ .Values.auth.existingSecret }}
+{{- else }}
+⚠️  No authentication tokens configured.
+After the server starts, authenticate with:
+
+  kubectl exec -it --namespace {{ .Release.Namespace }} deployment/{{ include "hytale.fullname" . }} -- /bin/bash
+
+  Then run in the server console:
+    /auth login device
+    /auth persistence Encrypted
 {{- end }}
 
 📁 DATA PERSISTENCE
@@ -58,10 +73,19 @@ To connect via RCON, use a compatible RCON client.
 {{- if .Values.persistence.enabled }}
 ✅ Persistence enabled
 Volume size: {{ .Values.persistence.size }}
-World data is being saved persistently.
+Mount path: /server
+Data saved: universe, logs, config, auth.enc
 {{- else }}
 ⚠️  Persistence disabled
-WARNING: World data will be lost when the pod restarts!
+WARNING: All server data will be lost when the pod restarts!
+Enable persistence for production deployments.
+{{- end }}
+
+{{- if .Values.machineId.mountFromHost }}
+
+🔑 MACHINE-ID
+--------------------------------------------------------------------------------
+✅ Machine-ID mounted from host for encrypted authentication persistence.
 {{- end }}
 
 🔍 USEFUL COMMANDS
@@ -69,11 +93,14 @@ WARNING: World data will be lost when the pod restarts!
 # View server logs
 kubectl logs -f --namespace {{ .Release.Namespace }} deployment/{{ include "hytale.fullname" . }}
 
-# Access container shell
-kubectl exec -it --namespace {{ .Release.Namespace }} deployment/{{ include "hytale.fullname" . }} -- /bin/sh
+# Access container shell (as hytale user)
+kubectl exec -it --namespace {{ .Release.Namespace }} deployment/{{ include "hytale.fullname" . }} -- /bin/bash
 
 # Check pod status
 kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "hytale.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+# Describe pod (for troubleshooting)
+kubectl describe pod --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "hytale.name" . }}"
 
 ================================================================================
             Have fun on EverHytale! 🚀

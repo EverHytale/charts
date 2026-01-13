@@ -10,32 +10,17 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.service.type }}
-  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.externalTrafficPolicy }}
+  {{- if and (or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort")) .Values.service.externalTrafficPolicy }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
   {{- end }}
   ports:
+    # Hytale uses QUIC protocol which runs over UDP
     - port: {{ .Values.service.port }}
       targetPort: game
-      protocol: TCP
+      protocol: UDP
       name: game
       {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
       nodePort: {{ .Values.service.nodePort }}
       {{- end }}
-    - port: {{ .Values.service.port }}
-      targetPort: game-udp
-      protocol: UDP
-      name: game-udp
-      {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
-      nodePort: {{ .Values.service.nodePort }}
-      {{- end }}
-    {{- if .Values.server.rcon.enabled }}
-    - port: {{ .Values.service.rconPort }}
-      targetPort: rcon
-      protocol: TCP
-      name: rcon
-      {{- if and (eq .Values.service.type "NodePort") .Values.service.rconNodePort }}
-      nodePort: {{ .Values.service.rconNodePort }}
-      {{- end }}
-    {{- end }}
   selector:
     {{- include "hytale.selectorLabels" . | nindent 4 }}

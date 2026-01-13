@@ -38,56 +38,95 @@ podAnnotations: {}
 podLabels: {}
 
 # -- Pod security context
-podSecurityContext: {}
-  # fsGroup: 1000
+# UID/GID 1001 matches the Dockerfile (ARG HYTALE_UID/HYTALE_GID)
+podSecurityContext:
+  fsGroup: 1001
 
 # -- Container security context
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #     - ALL
-  # readOnlyRootFilesystem: false
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
 
 # =============================================================================
-# Server Configuration
+# Hytale Server Configuration
 # =============================================================================
 
 server:
-  # -- Server name displayed in the server list
-  name: "Hytale Server"
-  # -- Message of the day
-  motd: "Welcome to Hytale!"
-  # -- Maximum number of players
-  maxPlayers: 20
-  # -- Game server port (TCP/UDP)
-  port: 25565
-  # -- Game mode (survival, creative, adventure)
-  gameMode: "survival"
-  # -- Difficulty (peaceful, easy, normal, hard)
-  difficulty: "normal"
-  # -- Enable PvP
-  pvp: true
-  # -- View distance in chunks
-  viewDistance: 10
-  # -- World seed (leave empty for random)
-  seed: ""
-  # -- Enable whitelist
-  whitelist: false
+  # -- Server port (Hytale uses QUIC/UDP on port 5520)
+  port: 5520
+  # -- Server bind address
+  bind: "0.0.0.0"
 
-  # -- RCON configuration for remote administration
-  rcon:
-    # -- Enable RCON
-    enabled: false
-    # -- RCON port
-    port: 25575
-    # -- RCON password (required if enabled)
-    password: "changeme"
-    # -- Use existing secret for RCON password
-    existingSecret: ""
-    # -- Key in existing secret containing the password
-    existingSecretKey: "password"
+  # -- Authentication mode (authenticated, unauthenticated)
+  authMode: "authenticated"
+
+  # -- Disable Sentry error reporting (development mode)
+  disableSentry: false
+
+  # -- Enable AOT cache for faster startup (requires HytaleServer.aot)
+  useAotCache: true
+
+  # -- Extra arguments to pass to the server
+  # Example: "--allow-op --accept-early-plugins"
+  extraArgs: ""
+
+# =============================================================================
+# JVM Configuration
+# =============================================================================
+
+jvm:
+  # -- Minimum memory allocation (minimum 4GB recommended by Hytale)
+  minMemory: "4G"
+  # -- Maximum memory allocation
+  maxMemory: "8G"
+  # -- Additional JVM options (overrides default JAVA_OPTS)
+  # Default: -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+DisableExplicitGC
+  #          -XX:+AlwaysPreTouch -XX:+UseStringDeduplication -XX:+OptimizeStringConcat
+  #          -Dfile.encoding=UTF-8
+  javaOpts: ""
+
+# =============================================================================
+# Backup Configuration
+# =============================================================================
+
+backup:
+  # -- Enable automatic backups
+  enabled: false
+  # -- Backup frequency in minutes
+  frequency: 30
+
+# =============================================================================
+# Token Authentication (alternative to /auth login device)
+# =============================================================================
+# Tokens can be obtained via OAuth2 Device Flow using hytale-auth.sh
+# If not provided, use '/auth login device' after server start
+
+auth:
+  # -- Owner username (for display purposes)
+  ownerName: ""
+  # -- Owner UUID
+  ownerUuid: ""
+  # -- Session token
+  sessionToken: ""
+  # -- Identity token
+  identityToken: ""
+
+  # -- Use existing secret for authentication tokens
+  # Secret should contain keys: SESSION_TOKEN, IDENTITY_TOKEN, OWNER_NAME, OWNER_UUID
+  existingSecret: ""
+
+# =============================================================================
+# Machine ID Configuration
+# =============================================================================
+# Required for encrypted authentication persistence
+# If not mounted, authentication may need to use 'Memory' persistence
+
+machineId:
+  # -- Mount /etc/machine-id from host
+  mountFromHost: false
+  # -- Host path for machine-id (usually /etc/machine-id)
+  hostPath: "/etc/machine-id"
 
 # =============================================================================
 # Service Configuration
@@ -96,15 +135,12 @@ server:
 service:
   # -- Service type (ClusterIP, NodePort, LoadBalancer)
   type: ClusterIP
-  # -- Game port
-  port: 25565
-  # -- RCON port
-  rconPort: 25575
-  # -- Node port for game (only if type is NodePort)
+  # -- Game port (QUIC/UDP)
+  port: 5520
+  # -- Node port (only if type is NodePort, range 30000-32767)
   nodePort: null
-  # -- Node port for RCON (only if type is NodePort)
-  rconNodePort: null
   # -- External traffic policy (Local or Cluster)
+  # Use "Local" to preserve client IP for LoadBalancer/NodePort
   externalTrafficPolicy: ""
   # -- Service annotations
   annotations: {}
@@ -114,7 +150,7 @@ service:
 # =============================================================================
 
 persistence:
-  # -- Enable persistence for world data
+  # -- Enable persistence for server data (universe, logs, config, auth.enc)
   enabled: true
   # -- Use an existing PVC
   existingClaim: ""
@@ -128,21 +164,13 @@ persistence:
   annotations: {}
 
 # =============================================================================
-# ConfigMap Configuration
+# Gateway API - UDPRoute Configuration
 # =============================================================================
 
-configMap:
-  # -- Enable ConfigMap for server.properties
-  enabled: true
-
-# =============================================================================
-# Gateway API - TCPRoute Configuration
-# =============================================================================
-
-tcpRoute:
-  # -- Enable Gateway API TCPRoute
+udpRoute:
+  # -- Enable Gateway API UDPRoute (requires Gateway API v1alpha2+)
   enabled: false
-  # -- TCPRoute annotations
+  # -- UDPRoute annotations
   annotations: {}
   # -- Parent Gateway references
   parentRefs:
@@ -154,41 +182,50 @@ tcpRoute:
 # Resource Configuration
 # =============================================================================
 
-resources: {}
-  # requests:
-  #   cpu: 500m
-  #   memory: 1Gi
-  # limits:
-  #   cpu: 2000m
-  #   memory: 4Gi
+resources:
+  requests:
+    cpu: 1000m
+    memory: 4Gi
+  limits:
+    cpu: 4000m
+    memory: 8Gi
 
 # =============================================================================
 # Probes Configuration
 # =============================================================================
 
-# -- Liveness probe configuration (TCP check on game port)
+# -- Liveness probe configuration (checks if HytaleServer.jar process is running)
 livenessProbe:
-  tcpSocket:
-    port: game
+  exec:
+    command:
+      - pgrep
+      - -f
+      - HytaleServer.jar
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# -- Readiness probe configuration
+readinessProbe:
+  exec:
+    command:
+      - pgrep
+      - -f
+      - HytaleServer.jar
   initialDelaySeconds: 60
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 3
 
-# -- Readiness probe configuration (TCP check on game port)
-readinessProbe:
-  tcpSocket:
-    port: game
-  initialDelaySeconds: 30
-  periodSeconds: 5
-  timeoutSeconds: 3
-  failureThreshold: 3
-
-# -- Startup probe configuration (gives time for initial world generation)
+# -- Startup probe configuration (gives time for initial startup)
 startupProbe:
-  tcpSocket:
-    port: game
-  initialDelaySeconds: 10
+  exec:
+    command:
+      - pgrep
+      - -f
+      - HytaleServer.jar
+  initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 30
